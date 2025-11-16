@@ -53,7 +53,7 @@ def wavy_shader(surface, intensity=10, speed=0.004):
 # -------------------------------------
 # BLOOM / GLOW
 # -------------------------------------
-def bloom(surface, radius=3, passes=2):
+def bloom(surface, radius=3, passes=1):
     scaled = surface.copy()
     for _ in range(passes):
         scaled = pygame.transform.smoothscale(
@@ -133,4 +133,5 @@ while True:
 
     pygame.display.flip()
     clock.tick(60)
+
 
