@@ -8,130 +8,52 @@ timer
 
 @author: cdelor
 """
-
-import pygame
-import math
+import pygame, math
 pygame.init()
 
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
-# -------------------------------------
-# DEGRADÉ RADIAL
-# -------------------------------------
-def radial_gradient(surface, center_color, edge_color):
-    w, h = surface.get_size()
-    cx, cy = w // 2, h // 2
-    max_dist = math.sqrt(cx*cx + cy*cy)
-
-    for y in range(h):
-        for x in range(w):
-            dist = math.sqrt((x - cx)**2 + (y - cy)**2)
-            ratio = dist / max_dist
-            r = int(center_color[0] * (1-ratio) + edge_color[0] * ratio)
-            g = int(center_color[1] * (1-ratio) + edge_color[1] * ratio)
-            b = int(center_color[2] * (1-ratio) + edge_color[2] * ratio)
-            surface.set_at((x, y), (r, g, b))
-
-
-# -------------------------------------
-# BRUME ONDULANTE
-# -------------------------------------
-def wavy_shader(surface, intensity=10, speed=0.004):
-    w, h = surface.get_size()
-    t = pygame.time.get_ticks() * speed
-    out = pygame.Surface((w, h))
-
-    for y in range(h):
-        x_offset = int(math.sin(t + y*0.04) * intensity)
-        out.blit(surface, (x_offset, y), area=pygame.Rect(0, y, w, 1))
-
-    return out
-
-
-# -------------------------------------
-# BLOOM / GLOW
-# -------------------------------------
-def bloom(surface, radius=3, passes=1):
+def bloom(surface, radius=3, passes=2):
     scaled = surface.copy()
     for _ in range(passes):
-        scaled = pygame.transform.smoothscale(
-            scaled,
-            (scaled.get_width()//radius, scaled.get_height()//radius)
-        )
-        scaled = pygame.transform.smoothscale(
-            scaled,
-            (surface.get_width(), surface.get_height())
-        )
-    glow = scaled.convert_alpha()
-    glow.set_alpha(120)
-    return glow
+        scaled = pygame.transform.smoothscale(scaled, 
+                    (scaled.get_width()//radius, scaled.get_height()//radius))
+        scaled = pygame.transform.smoothscale(scaled, 
+                    (surface.get_width(), surface.get_height()))
+    scaled.set_alpha(160)
+    return scaled
 
+def tint_red_demon_pulse(surface):
+    t = pygame.time.get_ticks() * 0.01
+    pulse = int(40 + 40 * abs(math.sin(t)))
+    color = (255, 10 + pulse, 40 + pulse)
 
-# -------------------------------------
-# ONDE DE CHOC
-# -------------------------------------
-def shockwave(surface, x, y, radius):
-    copy = surface.copy()
-    for dy in range(-radius, radius):
-        for dx in range(-radius, radius):
-            if dx*dx + dy*dy < radius*radius:
-                dist = math.sqrt(dx*dx + dy*dy)
-                offset = int(math.sin(dist / radius * math.pi) * 8)
+    tint = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    tint.fill(color)
+    surface.blit(tint, (0,0), special_flags=pygame.BLEND_MULT)
+    return surface
 
-                sx = x + dx + offset
-                sy = y + dy + offset
-
-                if 0 <= sx < WIDTH and 0 <= sy < HEIGHT:
-                    copy.set_at((x+dx, y+dy), surface.get_at((sx, sy)))
-
-    return copy
-
-
-# -------------------------------------
-# FOND INITIAL
-# -------------------------------------
-base_bg = pygame.Surface((WIDTH, HEIGHT))
-radial_gradient(base_bg, (10, 40, 10), (0, 0, 0))
-
-shock = None  # onde de choc stockée ici
-
-
-# -------------------------------------
-# BOUCLE PRINCIPALE
-# -------------------------------------
 while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
             pygame.quit()
             quit()
 
-        # clique souris = onde de choc
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            mx, my = pygame.mouse.get_pos()
-            shock = (mx, my, 120)
+    # fond gris foncé
+    bg = pygame.Surface((WIDTH, HEIGHT))
+    bg.fill((30, 30, 30))
 
-    # Dégradé animé
-    t = pygame.time.get_ticks() * 0.0004
-    bg = base_bg.copy()
+    # cercle blanc très brillant
+    pygame.draw.circle(bg, (255, 255, 255), (400, 300), 60)
 
-    # Brume ondulante
-    bg = wavy_shader(bg, intensity=12)
-
-    # Onde de choc
-    if shock:
-        bg = shockwave(bg, *shock)
-        shock = None
-
-    # Bloom (effet de glow)
+    # Glow rouge démon
     glow = bloom(bg)
+    glow = tint_red_demon_pulse(glow)
 
-    # Affichage final
-    screen.blit(bg, (0, 0))
-    screen.blit(glow, (0, 0), special_flags=pygame.BLEND_ADD)
+    screen.blit(bg, (0,0))
+    screen.blit(glow, (0,0), special_flags=pygame.BLEND_ADD)
 
     pygame.display.flip()
     clock.tick(60)
-
-
